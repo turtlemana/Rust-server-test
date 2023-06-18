@@ -54,7 +54,7 @@ async fn search(pool: web::Data<MySqlPool>, search: web::Query<HashMap<String, S
     );
 
     let rows: Result<Vec<SearchResult>, _> = sqlx::query_as(&query)
-        .fetch_all(&**pool)
+        .fetch_all(pool.as_ref())
         .await;
 
     match rows {
@@ -94,8 +94,8 @@ async fn detail_chart(pool: web::Data<MySqlPool>, ticker: web::Path<String>) -> 
 async fn coin_tickers(pool: web::Data<MySqlPool>) -> impl Responder {
     let query = "SELECT al.ITEM_CD_DL as ticker FROM RMS.ALL_ASSETS al WHERE CAT = 'Crypto' ORDER BY al.TRADE_VALUE DESC";
 
-    let rows: Result<Vec<Ticker>, _> = sqlx::query_as(query)
-        .fetch_all(&**pool)
+    let rows: Result<Vec<Ticker>, _> = sqlx::query_as(&query)
+        .fetch_all(pool.as_ref())
         .await;
     match rows {
         Ok(tickers) => HttpResponse::Ok().json(tickers),
@@ -105,6 +105,7 @@ async fn coin_tickers(pool: web::Data<MySqlPool>) -> impl Responder {
         },
     }
 }
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
