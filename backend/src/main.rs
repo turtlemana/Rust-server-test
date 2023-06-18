@@ -4,8 +4,15 @@ use sqlx::MySqlPool;
 use dotenv::dotenv;
 use std::env;
 use serde_json::json;
+use sqlx::FromRow;
+use serde::Serialize;
+use serde::Deserialize;
 
 
+#[derive(Deserialize, FromRow,Serialize)]
+struct Ticker {
+    ticker: String,
+}
 
 #[get("/api/{ticker}")]
 async fn handler(pool: web::Data<MySqlPool>, ticker: web::Path<String>) -> impl Responder {
@@ -26,26 +33,26 @@ async fn handler(pool: web::Data<MySqlPool>, ticker: web::Path<String>) -> impl 
         Err(_) => HttpResponse::InternalServerError().json(json!({ "message": "Can't find data" })),
     }
 }
-
 #[get("/api/getCoinTicker")]
 async fn handler_detail_info(pool: web::Data<MySqlPool>) -> impl Responder {
-let query = format!(
-    "SELECT al.ITEM_CD_DL as ticker
-    FROM RMS.ALL_ASSETS al 
-    WHERE CAT = 'Crypto'
-    ORDER BY al.TRADE_VALUE DESC",
-);
-let rows = sqlx::query_as::<_, (String,)>(query.as_str())
-        .fetch_one(pool.as_ref())
+    let query = r#"
+        SELECT al.ITEM_CD_DL as ticker
+        FROM RMS.ALL_ASSETS al 
+        WHERE CAT = 'Crypto'
+        ORDER BY al.TRADE_VALUE DESC
+    "#;
+
+    let rows = sqlx::query_as::<_, Ticker>(query)
+        .fetch_all(pool.as_ref())
         .await;
 
-match rows {
-    Ok(result) => HttpResponse::Ok().json(result),
-    Err(err) => {
-        println!("Error: {:?}", err);
-        HttpResponse::InternalServerError().json(json!({ "message": "Can't find data" }))
+    match rows {
+        Ok(result) => HttpResponse::Ok().json(result),
+        Err(err) => {
+            println!("Error: {:?}", err);
+            HttpResponse::InternalServerError().json(json!({ "message": "Can't find data" }))
+        }
     }
-}
 }
 
 
